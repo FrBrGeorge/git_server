@@ -20,7 +20,7 @@ test = [
 ]
 
 [project.scripts]
-git-smart-http = "git_smart_http.__main__:main"
+git-smart-http = "git_smart_http.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

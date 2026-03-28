@@ -25,9 +25,6 @@ Start the server with default settings (port 3000, repos in `./repos`):
 # Using the module
 PYTHONPATH=src python3 -m git_smart_http
 
-# Using the run.py script
-python3 run.py
-
 # If installed via pip
 git-smart-http
 ```

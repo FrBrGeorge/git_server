@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "python3 run.py repos -H 0.0.0.0 -p 3000 -vv",
+    "dev": "PYTHONPATH=src python3 -m git_smart_http repos -H 0.0.0.0 -p 3000 -vv",
     "build": "python3 -m pip install build && python3 -m build",
     "test": "PYTHONPATH=src python3 -m pytest tests/",
     "clean": "rm -rf dist build *.egg-info",
