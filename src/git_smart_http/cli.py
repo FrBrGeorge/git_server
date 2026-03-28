@@ -3,6 +3,7 @@ import logging
 import sys
 from typing import Optional, List
 from .server import run_server
+from . import __version__
 
 def setup_logging(verbose_level: int, logfile: Optional[str] = None):
     """
@@ -71,6 +72,7 @@ def main(argv: Optional[List[str]] = None):
     parser.add_argument("-v", "--verbose", action="count", default=0, help="Increase verbosity (can be used multiple times)")
     parser.add_argument("-l", "--logfile", help="Enable logging to file (file log level is always fixed at INFO)")
     parser.add_argument("-t", "--trusted-host", action="append", help="Add a trusted host (can be used multiple times)")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
 
     args = parser.parse_args(argv if argv is not None else sys.argv[1:])
 

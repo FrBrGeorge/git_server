@@ -36,6 +36,7 @@ git-smart-http
 - `-v`, `--verbose`: Increase console verbosity (can be used multiple times).
 - `-l`, `--logfile`: Enable logging to a file (file log level is always fixed at INFO).
 - `-t`, `--trusted-host`: Add a trusted host IP (can be used multiple times).
+- `--version`: Show the version number and exit.
 
 ### Client Usage
 **Cloning:**
@@ -52,6 +53,10 @@ git push origin main
 
 **Listing Repositories:**
 Open `http://localhost:3000/` in your browser to see the list of repositories using the built-in simple HTTP server.
+
+## Authors
+- **Fr. Br. George**
+- **AI Studio Build**
 
 ## Development
 This project was built using **Google AI Studio**. To run tests:
