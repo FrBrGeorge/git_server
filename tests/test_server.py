@@ -33,16 +33,20 @@ class TestGitSmartHTTP(unittest.TestCase):
             shutil.rmtree(cls.repo_dir)
 
     def test_list_repositories(self):
-        # Simple HTTP server should list files in repo_dir
-        # Create a dummy file
-        with open(os.path.join(self.repo_dir, "dummy.txt"), "w") as f:
-            f.write("test")
+        # The custom root handler should list directories in repo_dir
+        # Create a dummy repository directory
+        repo_name = "test-repo"
+        os.makedirs(os.path.join(self.repo_dir, repo_name), exist_ok=True)
         
         url = f"http://{self.host}:{self.port}/"
         with urllib.request.urlopen(url) as response:
             self.assertEqual(response.status, 200)
             body = response.read().decode('utf-8')
-            self.assertIn("dummy.txt", body)
+            self.assertIn("Git Smart HTTP Server", body)
+            self.assertIn(repo_name, body)
+            self.assertIn("How to Use", body)
+            self.assertIn("Create a New Repository", body)
+            self.assertIn("Clone an Existing Repository", body)
 
     def test_clone_auto_create(self):
         repo_name = "auto-created.git"
