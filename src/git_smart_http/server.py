@@ -36,8 +36,10 @@ ROOT_HTML_TEMPLATE = """
     <h2>How to Use</h2>
     
     <h3>Create a New Repository</h3>
-    <p>To create a new repository, simply push to a non-existent path from a trusted host:</p>
-    <pre>git remote add origin http://localhost:{port}/my-new-repo
+    <p>To create a new repository, simply clone a non-existent path from a trusted host:</p>
+    <pre>git clone http://localhost:{port}/my-new-repo
+cd my-new-repo
+# Add files, commit, and push back
 git push -u origin main</pre>
 
     <h3>Clone an Existing Repository</h3>
