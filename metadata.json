@@ -1,0 +1,5 @@
+{
+  "name": "Git Smart HTTP Server",
+  "description": "A pure Python implementation of a Git Smart HTTP server with no run dependencies.",
+  "requestFramePermissions": []
+}

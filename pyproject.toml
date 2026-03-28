@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "git-smart-http"
+version = "0.1.0"
+description = "A pure Python implementation of a Git Smart HTTP server"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "AI Studio Build", email = "frbrgeorge@gmail.com"}
+]
+dependencies = []
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+]
+
+[project.scripts]
+git-smart-http = "git_smart_http.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
