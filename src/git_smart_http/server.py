@@ -38,17 +38,17 @@ ROOT_HTML_TEMPLATE = """
     <h2>How to Use</h2>
     
     <h3>Create a New Repository</h3>
-    <p>To create a new repository, simply clone a non-existent path from a trusted host:</p>
+    <p>To create a new repository, simply clone a non-existent path from a trusted address:</p>
     <pre>git clone http://localhost:{port}/my-new-repo
 cd my-new-repo
 # Add files, commit, and push back
 git push -u origin main</pre>
 
     <h3>Clone an Existing Repository</h3>
-    <p>From any host:</p>
+    <p>From any address:</p>
     <pre>git clone http://{local_ip}:{port}/repository-name</pre>
     
-    <p>From a trusted host (allows pushing back):</p>
+    <p>From a trusted address (allows pushing back):</p>
     <pre>git clone http://localhost:{port}/repository-name</pre>
 
     <hr>
@@ -62,7 +62,7 @@ REPO_ITEM_HTML_TEMPLATE = """
     <span class="repo-name"><a href="/{repo}/">{repo}</a></span>
     <div class="link-group">
         <span class="link-label">Read/Write:</span> <code>http://localhost:{port}/{repo}</code>
-        <div class="trusted-info">(Only accessible from trusted hosts: {trusted_hosts})</div>
+        <div class="trusted-info">(Only accessible from trusted addresses: {trusted_addresses})</div>
     </div>
     <div class="link-group">
         <span class="link-label">Read-Only:</span> <code>http://{local_ip}:{port}/{repo}</code>
@@ -95,24 +95,24 @@ class GitSmartHTTPHandler(SimpleHTTPRequestHandler):
     """
     def __init__(self, *args, **kwargs):
         """
-        Initialize the handler with repository directory and trusted hosts.
+        Initialize the handler with repository directory and trusted addresses.
 
         :param args: Positional arguments for SimpleHTTPRequestHandler.
-        :param kwargs: Keyword arguments, including 'directory' for repo storage and 'trusted_hosts'.
+        :param kwargs: Keyword arguments, including 'directory' for repo storage and 'trusted_addresses'.
         """
         self.repo_dir = kwargs.get('directory', os.getcwd())
-        self.trusted_hosts = kwargs.pop('trusted_hosts', ['127.0.0.1', 'localhost'])
+        self.trusted_addresses = kwargs.pop('trusted_addresses', ['127.0.0.1', 'localhost'])
         super().__init__(*args, **kwargs)
 
     def is_trusted(self) -> bool:
         """
-        Check if the client's IP address is in the list of trusted hosts.
+        Check if the client's IP address is in the list of trusted addresses.
 
         :return: True if trusted, False otherwise.
         :rtype: bool
         """
         client_address = self.client_address[0]
-        return client_address in self.trusted_hosts
+        return client_address in self.trusted_addresses
 
     def send_headers(self, content_type: str, status: int = 200, cache_control: Optional[str] = None):
         """
@@ -161,7 +161,7 @@ class GitSmartHTTPHandler(SimpleHTTPRequestHandler):
             self.handle_git_service(path, 'git-upload-pack')
         elif path.endswith('/git-receive-pack'):
             if not self.is_trusted():
-                self.send_error(403, "Forbidden: Push only allowed from trusted hosts")
+                self.send_error(403, "Forbidden: Push only allowed from trusted addresses")
                 return
             self.handle_git_service(path, 'git-receive-pack')
         else:
@@ -186,12 +186,12 @@ class GitSmartHTTPHandler(SimpleHTTPRequestHandler):
 
         if repos:
             repo_items = []
-            trusted_hosts_str = ", ".join(self.trusted_hosts)
+            trusted_addresses_str = ", ".join(self.trusted_addresses)
             for repo in repos:
                 item = REPO_ITEM_HTML_TEMPLATE.format(
                     repo=repo,
                     port=port,
-                    trusted_hosts=trusted_hosts_str,
+                    trusted_addresses=trusted_addresses_str,
                     local_ip=local_ip
                 )
                 repo_items.append(item)
@@ -228,7 +228,7 @@ class GitSmartHTTPHandler(SimpleHTTPRequestHandler):
                 return
 
         if service == 'git-receive-pack' and not self.is_trusted():
-            self.send_error(403, "Forbidden: Push only allowed from trusted hosts")
+            self.send_error(403, "Forbidden: Push only allowed from trusted addresses")
             return
 
         self.send_headers(f'application/x-{service}-advertisement', cache_control='no-cache')
@@ -278,7 +278,7 @@ class GitSmartHTTPHandler(SimpleHTTPRequestHandler):
         
         self.wfile.write(stdout)
 
-def run_server(host: str, port: int, repo_dir: str, trusted_hosts: List[str]):
+def run_server(host: str, port: int, repo_dir: str, trusted_addresses: List[str]):
     """
     Run the Git Smart HTTP server.
 
@@ -288,18 +288,18 @@ def run_server(host: str, port: int, repo_dir: str, trusted_hosts: List[str]):
     :type port: int
     :param repo_dir: The directory where repositories are stored.
     :type repo_dir: str
-    :param trusted_hosts: A list of IP addresses allowed to perform administrative actions (push, auto-create).
-    :type trusted_hosts: List[str]
+    :param trusted_addresses: A list of IP addresses allowed to perform administrative actions (push, auto-create).
+    :type trusted_addresses: List[str]
     """
     os.makedirs(repo_dir, exist_ok=True)
     
     def handler_factory(*args, **kwargs):
-        return GitSmartHTTPHandler(*args, directory=repo_dir, trusted_hosts=trusted_hosts, **kwargs)
+        return GitSmartHTTPHandler(*args, directory=repo_dir, trusted_addresses=trusted_addresses, **kwargs)
     
     server = HTTPServer((host, port), handler_factory)
     logger.info(f"Starting Git Smart HTTP server on {host}:{port}")
     logger.info(f"Repositories directory: {repo_dir}")
-    logger.info(f"Trusted hosts: {trusted_hosts}")
+    logger.info(f"Trusted addresses: {trusted_addresses}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

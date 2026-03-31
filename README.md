@@ -43,14 +43,29 @@ git-smart-http
 - `--version`: Show the version number and exit.
 
 ### Client Usage
-**Cloning:**
+A **trusted host** is an IP address explicitly allowed to perform write operations (pushing and auto-creating repositories) via the `-t` or `--trusted-host` CLI option. By default, only `127.0.0.1` is trusted if no other hosts are specified.
+
+**Creating a new repository:**
 If the host is trusted, cloning a non-existent repository will auto-create it:
 ```bash
 git clone http://localhost:3000/my-new-repo.git
 ```
 
+**Cloning:**
+- **Read-Write Access (Trusted Host):**
+  Cloning from a trusted host allows full smart HTTP protocol support, including pushing back to the server.
+  ```bash
+  git clone http://localhost:3000/repo.git
+  ```
+- **Read-Only Access (Untrusted Host):**
+  Untrusted hosts can still clone existing repositories but cannot push or trigger auto-creation.
+  ```bash
+  # Assuming the server is running on 192.168.1.50 and this host is not trusted
+  git clone http://192.168.1.50:3000/repo.git
+  ```
+
 **Pushing:**
-Pushing is only allowed from trusted hosts:
+Pushing is only allowed from trusted hosts.
 ```bash
 git push origin main
 ```
@@ -59,8 +74,8 @@ git push origin main
 Open `http://localhost:3000/` in your browser to see the list of repositories using the built-in simple HTTP server.
 
 ## Authors
-- **Fr. Br. George**
-- **AI Studio Build**
+- **[Fr. Br. George](https://github.com/frbrgeorge)**
+- **[AI Studio Build](https://ai.studio/build)**
 
 ## Development
 This project was built using **Google AI Studio**. To run tests:

@@ -13,7 +13,7 @@ class TestGitSmartHTTP(unittest.TestCase):
         cls.host = "127.0.0.1"
         cls.port = 3001
         cls.repo_dir = "test_repos"
-        cls.trusted_hosts = ["127.0.0.1", "localhost"]
+        cls.trusted_addresses = ["127.0.0.1", "localhost"]
         
         if os.path.exists(cls.repo_dir):
             shutil.rmtree(cls.repo_dir)
@@ -21,7 +21,7 @@ class TestGitSmartHTTP(unittest.TestCase):
 
         cls.server_thread = threading.Thread(
             target=run_server,
-            args=(cls.host, cls.port, cls.repo_dir, cls.trusted_hosts),
+            args=(cls.host, cls.port, cls.repo_dir, cls.trusted_addresses),
             daemon=True
         )
         cls.server_thread.start()

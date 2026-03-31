@@ -72,7 +72,7 @@ def main(argv: Optional[List[str]] = None):
     parser.add_argument("-p", "--port", type=int, default=3000, help="Port to bind to (default: 3000)")
     parser.add_argument("-v", "--verbose", action="count", default=0, help="Increase verbosity (can be used multiple times)")
     parser.add_argument("-l", "--logfile", help="Enable logging to file (file log level is always fixed at INFO)")
-    parser.add_argument("-t", "--trusted-host", action="append", help="Add a trusted host (can be used multiple times)")
+    parser.add_argument("-t", "--trusted-address", action="append", help="Add a trusted address (can be used multiple times)")
     parser.add_argument("-b", "--browser", action="store_true", help="Open the server URL in the default web browser")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
 
@@ -87,8 +87,8 @@ def main(argv: Optional[List[str]] = None):
     if args.browser:
         webbrowser.open(server_url)
 
-    trusted_hosts = ["127.0.0.1", "localhost"]
-    if args.trusted_host:
-        trusted_hosts.extend(args.trusted_host)
+    trusted_addresses = ["127.0.0.1", "localhost"]
+    if args.trusted_address:
+        trusted_addresses.extend(args.trusted_address)
 
-    run_server(args.host, args.port, args.repo_dir, trusted_hosts)
+    run_server(args.host, args.port, args.repo_dir, trusted_addresses)
