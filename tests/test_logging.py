@@ -1,6 +1,6 @@
 import logging
-import os
 import unittest
+from pathlib import Path
 from git_smart_http.cli import setup_logging
 
 class TestLogging(unittest.TestCase):
@@ -34,14 +34,14 @@ class TestLogging(unittest.TestCase):
         self.assertEqual(root.handlers[0].level, logging.DEBUG)
 
     def test_file_logging(self):
-        logfile = "test_log.log"
-        if os.path.exists(logfile):
-            os.remove(logfile)
+        logfile = Path("test_log.log")
+        if logfile.exists():
+            logfile.unlink()
             
         try:
             # Test with logfile and verbose=0
             # Console should be ERROR, File should be INFO
-            setup_logging(0, logfile)
+            setup_logging(0, str(logfile))
             root = logging.getLogger()
             self.assertEqual(len(root.handlers), 2)
             
@@ -57,7 +57,7 @@ class TestLogging(unittest.TestCase):
             
             # Test with logfile and verbose=3
             # Console should be DEBUG, File should be INFO
-            setup_logging(3, logfile)
+            setup_logging(3, str(logfile))
             root = logging.getLogger()
             console_handler = next(h for h in root.handlers if isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler))
             file_handler = next(h for h in root.handlers if isinstance(h, logging.FileHandler))
@@ -75,8 +75,8 @@ class TestLogging(unittest.TestCase):
                 if isinstance(handler, logging.FileHandler):
                     handler.close()
                 root.removeHandler(handler)
-            if os.path.exists(logfile):
-                os.remove(logfile)
+            if logfile.exists():
+                logfile.unlink()
 
 if __name__ == "__main__":
     unittest.main()

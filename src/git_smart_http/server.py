@@ -1,5 +1,5 @@
 import logging
-import os
+from pathlib import Path
 import socket
 import subprocess
 import urllib.parse
@@ -39,7 +39,7 @@ ROOT_HTML_TEMPLATE = """
     
     <h3>Create a New Repository</h3>
     <p>To create a new repository, simply clone a non-existent path from a trusted address:</p>
-    <pre>git clone http://localhost:{port}/my-new-repo
+    <pre>git clone http://127.0.0.1:{port}/my-new-repo
 cd my-new-repo
 # Add files, commit, and push back
 git push -u origin main</pre>
@@ -49,7 +49,7 @@ git push -u origin main</pre>
     <pre>git clone http://{local_ip}:{port}/repository-name</pre>
     
     <p>From a trusted address (allows pushing back):</p>
-    <pre>git clone http://localhost:{port}/repository-name</pre>
+    <pre>git clone http://127.0.0.1:{port}/repository-name</pre>
 
     <hr>
     <p style="font-size: 0.8em; color: #777;">Server IP: {local_ip} | Port: {port}</p>
@@ -61,7 +61,7 @@ REPO_ITEM_HTML_TEMPLATE = """
 <li>
     <span class="repo-name"><a href="/{repo}/">{repo}</a></span>
     <div class="link-group">
-        <span class="link-label">Read/Write:</span> <code>http://localhost:{port}/{repo}</code>
+        <span class="link-label">Read/Write:</span> <code>http://127.0.0.1:{port}/{repo}</code>
         <div class="trusted-info">(Only accessible from trusted addresses: {trusted_addresses})</div>
     </div>
     <div class="link-group">
@@ -100,8 +100,8 @@ class GitSmartHTTPHandler(SimpleHTTPRequestHandler):
         :param args: Positional arguments for SimpleHTTPRequestHandler.
         :param kwargs: Keyword arguments, including 'directory' for repo storage and 'trusted_addresses'.
         """
-        self.repo_dir = kwargs.get('directory', os.getcwd())
-        self.trusted_addresses = kwargs.pop('trusted_addresses', ['127.0.0.1', 'localhost'])
+        self.repo_dir = Path(kwargs.get('directory', Path.cwd()))
+        self.trusted_addresses = kwargs.pop('trusted_addresses', ['127.0.0.1', '::1'])
         super().__init__(*args, **kwargs)
 
     def is_trusted(self) -> bool:
@@ -178,10 +178,10 @@ class GitSmartHTTPHandler(SimpleHTTPRequestHandler):
         
         # List repositories
         repos = []
-        if os.path.exists(self.repo_dir):
-            for entry in os.listdir(self.repo_dir):
-                if os.path.isdir(os.path.join(self.repo_dir, entry)):
-                    repos.append(entry)
+        if self.repo_dir.exists():
+            for entry in self.repo_dir.iterdir():
+                if entry.is_dir():
+                    repos.append(entry.name)
         repos.sort()
 
         if repos:
@@ -216,13 +216,13 @@ class GitSmartHTTPHandler(SimpleHTTPRequestHandler):
         :type service: str
         """
         repo_name = path.split('/info/refs')[0].strip('/')
-        repo_path = os.path.join(self.repo_dir, repo_name)
+        repo_path = self.repo_dir / repo_name
 
-        if not os.path.exists(repo_path):
+        if not repo_path.exists():
             if self.is_trusted() and service == 'git-upload-pack':
                 logger.info(f"Auto-creating repository: {repo_path}")
-                os.makedirs(repo_path, exist_ok=True)
-                subprocess.run(['git', 'init', '--bare'], cwd=repo_path, check=True)
+                repo_path.mkdir(parents=True, exist_ok=True)
+                subprocess.run(['git', 'init', '--bare'], cwd=str(repo_path), check=True)
             else:
                 self.send_error(404, "Repository Not Found")
                 return
@@ -240,7 +240,7 @@ class GitSmartHTTPHandler(SimpleHTTPRequestHandler):
         self.wfile.write(f"{length}{prefix}0000".encode('utf-8'))
 
         # Call git service with --stateless-rpc --advertise-refs
-        cmd = ['git', service.split('git-')[-1], '--stateless-rpc', '--advertise-refs', repo_path]
+        cmd = ['git', service.split('git-')[-1], '--stateless-rpc', '--advertise-refs', str(repo_path)]
         subprocess.run(cmd, stdout=self.wfile, check=True)
 
     def handle_git_service(self, path: str, service: str):
@@ -253,9 +253,9 @@ class GitSmartHTTPHandler(SimpleHTTPRequestHandler):
         :type service: str
         """
         repo_name = path.split(f'/{service}')[0].strip('/')
-        repo_path = os.path.join(self.repo_dir, repo_name)
+        repo_path = self.repo_dir / repo_name
 
-        if not os.path.exists(repo_path):
+        if not repo_path.exists():
             self.send_error(404, "Repository Not Found")
             return
 
@@ -265,7 +265,7 @@ class GitSmartHTTPHandler(SimpleHTTPRequestHandler):
         content_length = int(self.headers.get('Content-Length', 0))
         
         # We use a subprocess to handle the git command
-        cmd = ['git', service.split('git-')[-1], '--stateless-rpc', repo_path]
+        cmd = ['git', service.split('git-')[-1], '--stateless-rpc', str(repo_path)]
         process = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
         # Read body in chunks if necessary, but for simplicity we'll read all
@@ -278,27 +278,50 @@ class GitSmartHTTPHandler(SimpleHTTPRequestHandler):
         
         self.wfile.write(stdout)
 
-def run_server(host: str, port: int, repo_dir: str, trusted_addresses: List[str]):
+class DualStackHTTPServer(HTTPServer):
+    """
+    HTTP Server that supports both IPv4 and IPv6.
+    """
+    address_family = socket.AF_INET6
+
+    def server_bind(self):
+        """
+        Bind the server to the address, ensuring dual-stack support if possible.
+        """
+        try:
+            # Try to enable dual-stack support
+            if hasattr(socket, 'IPPROTO_IPV6') and hasattr(socket, 'IPV6_V6ONLY'):
+                self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+        except (AttributeError, socket.error):
+            # Fallback if dual-stack is not supported
+            pass
+        super().server_bind()
+
+def run_server(host: str = "::", port: int = 3000, repo_dir: str = "repos", trusted_addresses: Optional[List[str]] = None):
     """
     Run the Git Smart HTTP server.
 
-    :param host: The host address to bind to.
+    :param host: The host address to bind to (default: ::).
     :type host: str
-    :param port: The port number to bind to.
+    :param port: The port number to bind to (default: 3000).
     :type port: int
-    :param repo_dir: The directory where repositories are stored.
+    :param repo_dir: The directory where repositories are stored (default: repos).
     :type repo_dir: str
     :param trusted_addresses: A list of IP addresses allowed to perform administrative actions (push, auto-create).
-    :type trusted_addresses: List[str]
+    :type trusted_addresses: Optional[List[str]]
     """
-    os.makedirs(repo_dir, exist_ok=True)
+    if trusted_addresses is None:
+        trusted_addresses = ["127.0.0.1", "::1"]
+    
+    repo_path = Path(repo_dir)
+    repo_path.mkdir(parents=True, exist_ok=True)
     
     def handler_factory(*args, **kwargs):
-        return GitSmartHTTPHandler(*args, directory=repo_dir, trusted_addresses=trusted_addresses, **kwargs)
+        return GitSmartHTTPHandler(*args, directory=str(repo_path), trusted_addresses=trusted_addresses, **kwargs)
     
-    server = HTTPServer((host, port), handler_factory)
+    server = DualStackHTTPServer((host, port), handler_factory)
     logger.info(f"Starting Git Smart HTTP server on {host}:{port}")
-    logger.info(f"Repositories directory: {repo_dir}")
+    logger.info(f"Repositories directory: {repo_path}")
     logger.info(f"Trusted addresses: {trusted_addresses}")
     try:
         server.serve_forever()
